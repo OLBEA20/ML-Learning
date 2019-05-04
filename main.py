@@ -51,13 +51,7 @@ class SupportVectorMachine:
                                    step * b_multiple):
                     for transformation in transforms:
                         w_t = w * transformation
-                        found_option = True
-                        for key in self.data:
-                            for x_i in self.data[key]:
-                                y_i = key
-                                if not y_i * (np.dot(w_t, x_i) + b) >= 1:
-                                    found_option = False
-                        if found_option:
+                        if self._all_data_satisfy_condition(w_t, b):
                             opt_dict[np.linalg.norm(w_t)] = [w_t, b]
                 if w[0] < 0:
                     optimized = True
@@ -70,6 +64,14 @@ class SupportVectorMachine:
             self.w = opt_choice[0]
             self.b = opt_choice[1]
             latest_optimum = opt_choice[0][0] + step * 2
+
+    def _all_data_satisfy_condition(self, w_t, b):
+        for key in self.data:
+            for x_i in self.data[key]:
+                y_i = key
+                if not y_i * (np.dot(w_t, x_i) + b) >= 1:
+                    return False
+        return True
 
     def predict(self, features):
         classification = np.sign(np.dot(np.array(features), self.w) + self.b)
