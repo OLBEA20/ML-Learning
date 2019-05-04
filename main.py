@@ -30,40 +30,42 @@ class SupportVectorMachine:
             step_sizes: List[float],
             b_range_multiple: int = 5,
             b_multiple: int = 5):
-        opt_dict = {}
-        transforms = [[1, 1],
-                      [-1, 1],
-                      [-1, -1],
-                      [1, -1]]
 
         step_sizes = (Stream(step_sizes)
                       .map(lambda step_size: step_size*self.max_feature_value)
                       .toList())
         latest_optimum = self.max_feature_value * 10
-
+        opt_dict = {}
         for step in step_sizes:
             w = np.array([latest_optimum, latest_optimum])
-            optimized = False
-            while not optimized:
-                for b in np.arange(-1 *
-                                   self.max_feature_value * b_range_multiple,
-                                   self.max_feature_value * b_range_multiple,
-                                   step * b_multiple):
-                    for transformation in transforms:
-                        w_t = w * transformation
-                        if self._all_data_satisfy_condition(w_t, b):
-                            opt_dict[np.linalg.norm(w_t)] = [w_t, b]
-                if w[0] < 0:
-                    optimized = True
+            while True:
+                opt_dict = {**opt_dict, **self._optimize(w, step, b_range_multiple, b_multiple)}
+                if self._optimized(w):
                     print('Optimized a step.')
-                else:
-                    w = w - step
-            norms = sorted([n for n in opt_dict])
+                    break
+                w = w - step
 
+            norms = sorted([n for n in opt_dict])
             opt_choice = opt_dict[norms[0]]
             self.w = opt_choice[0]
             self.b = opt_choice[1]
             latest_optimum = opt_choice[0][0] + step * 2
+
+    def _optimize(self, w, step: float, b_range_multiple: int, b_multiple: int):
+        optimisations = {}
+        transforms = [[1, 1],
+                      [-1, 1],
+                      [-1, -1],
+                      [1, -1]]
+        for b in np.arange(-1 *
+                            self.max_feature_value * b_range_multiple,
+                            self.max_feature_value * b_range_multiple,
+                            step * b_multiple):
+            for transformation in transforms:
+                w_t = w * transformation
+                if self._all_data_satisfy_condition(w_t, b):
+                    optimisations[np.linalg.norm(w_t)] = [w_t, b]
+        return optimisations 
 
     def _all_data_satisfy_condition(self, w_t, b):
         for key in self.data:
@@ -72,6 +74,9 @@ class SupportVectorMachine:
                 if not y_i * (np.dot(w_t, x_i) + b) >= 1:
                     return False
         return True
+    
+    def _optimized(self, w):
+        return w[0] < 0
 
     def predict(self, features):
         classification = np.sign(np.dot(np.array(features), self.w) + self.b)
